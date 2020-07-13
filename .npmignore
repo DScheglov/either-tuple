@@ -1,0 +1,14 @@
+ /*
+
+!/lib
+!/es
+!/src
+!/modern
+!index.js
+!index.d.ts
+!proxy.js
+!proxy.d.ts
+!utils.js
+!utils.d.ts
+
+/src/**/*.test.ts

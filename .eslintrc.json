@@ -1,0 +1,34 @@
+{
+	"extends": ["airbnb/base"],
+	"plugins": ["@typescript-eslint", "jest"],
+	"parser": "@typescript-eslint/parser",
+	"rules": {
+		"max-len": ["error", { "code": 100, "ignoreStrings": true }],
+		"implicit-arrow-linebreak": "off",
+		"import/no-unresolved": 0,
+		"indent": [2, 2, { 
+			"flatTernaryExpressions": true, 
+			"ignoredNodes": ["CallExpression"]
+		}],
+		"no-unexpected-multiline": "off",
+		"no-unused-vars": "off",
+		"no-undef": "error",
+    "no-tabs": "error",
+    "no-nested-ternary": 0,
+    "import/extensions": 0,
+    "arrow-parens": ["error", "as-needed"],
+    "operator-linebreak": 0,
+		"no-underscore-dangle": 0,
+		"no-spaced-func": 0,
+		"func-call-spacing": [2, "always", { "allowNewlines": true }],
+		"@typescript-eslint/no-unused-vars": ["error"],
+		"jest/no-disabled-tests": "warn",
+    "jest/no-focused-tests": "error",
+    "jest/no-identical-title": "error",
+    "jest/prefer-to-have-length": "warn",
+    "jest/valid-expect": "error"
+	},
+	"env": {
+    "jest/globals": true
+  }
+}
