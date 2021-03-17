@@ -1,10 +1,9 @@
 import {
-  Either, EitherLeft, EitherRight,
-  eitherRight, eitherLeft,
-  mapLeft, mapRight,
-  isEitherLeft, isEitherRight,
-  chainLeft, chainRight,
-  chain, chainLeftRight,
+  Either, Left, Right,
+  mapLeft, map,
+  isLeft, isRight,
+  chainLeft,
+  chain, bichain, extract, extLeft,
 } from '.';
 import pipe from './pipe';
 import { expectStrictType } from '../type-test-utils';
@@ -12,135 +11,154 @@ import { expectStrictType } from '../type-test-utils';
 describe ('either', () => {
   it ('allows to create function with return type Either<T, E>', () => {
     const fn = (value: number): Either<TypeError, number> => (
-      value % 2 === 1 ? eitherRight (value) :
-      eitherLeft (new TypeError ('value should be odd'))
+      value % 2 === 1
+        ? Right (value)
+        : Left (new TypeError ('value should be odd'))
     );
 
-    expect (fn (1)).toEqual (eitherRight (1));
-    expect (fn (2)).toEqual (eitherLeft (new TypeError ('value should be odd')));
+    expect (fn (1)).toEqual (Right (1));
+    expect (fn (2)).toEqual (Left (new TypeError ('value should be odd')));
   });
 
-  it ('allows to mapLeft an eitherLeft', () => {
+  it ('allows to mapLeft a Left', () => {
     const result =
-      pipe (eitherLeft (new Error ('Error: 1')))
-        (mapLeft (e => new Error (`Error: <${e.message}> 2`)))
-        ();
+      pipe (
+        Left (new Error ('Error: 1')),
+        mapLeft (e => new Error (`Error: <${e.message}> 2`)),
+      );
 
-    expect (result).toEqual (eitherLeft (
+    expect (result).toEqual (Left (
       new Error ('Error: <Error: 1> 2'),
     ));
   });
 
-  it ('allows to mapLeft an eitherRight', () => {
-    const result = pipe (eitherRight (1))
-      (mapLeft ((e: Error) => new Error (`Error: <${e.message}> 2`)))
-      ();
+  it ('allows to mapLeft a Right', () => {
+    const result = pipe (
+      Right (1),
+      mapLeft ((e: Error) => new Error (`Error: <${e.message}> 2`)),
+    );
 
-    expect (result).toEqual (eitherRight (1));
+    expect (result).toEqual (Right (1));
   });
 
-  it ('allows to mapRight an eitherRight', () => {
+  it ('allows to mapRight a Right', () => {
     expect (
-      pipe (eitherRight (1))
-        (mapRight (x => x + 1))
-        (mapRight (x => x * 3))
-        (),
-    ).toEqual (eitherRight (6));
+      pipe (
+        Right (1),
+        map (x => x + 1),
+        map (x => x * 3),
+      ),
+    ).toEqual (Right (6));
   });
 
-  it ('allows to mapRight an eitherLeft', () => {
+  it ('allows to mapRight a Left', () => {
     expect (
-      pipe (eitherLeft (new Error ('Error: 1')))
-        (mapRight ((x: number) => x + 1))
-        (mapRight (x => x * 3))
-        (),
-    ).toEqual (eitherLeft (new Error ('Error: 1')));
+      pipe (
+        Left (new Error ('Error: 1')),
+        map ((x: number) => x + 1),
+        map (x => x * 3),
+      ),
+    ).toEqual (Left (new Error ('Error: 1')));
   });
 
-  it ('allows to chainLeft an eitherLeft', () => {
+  it ('allows to chainLeft a Left', () => {
     expect (
-      pipe (eitherRight (100))
-        (chainLeft ((e: Error) => e.message))
-        (),
+      pipe (
+        Right (100),
+        chainLeft ((e: Error) => Left (e.message)),
+        either => (isLeft (either) ? extLeft (either) : undefined),
+      ),
     ).toBeUndefined ();
   });
 
-  it ('allows to chainLeft an eitherRight', () => {
+  it ('allows to chainLeft a Right', () => {
     expect (
-      pipe (eitherLeft (new Error ('this is an error')))
-        (chainLeft (e => e.message))
-        (),
+      pipe (
+        Left (new Error ('this is an error')),
+        chainLeft (e => Left (e.message)),
+        either => (isLeft (either) ? extLeft (either) : undefined),
+      ),
     ).toBe ('this is an error');
   });
 
-  it ('allows to chainRight an eitherRight', () => {
+  it ('allows to chain a Right', () => {
     expect (
-      pipe (eitherRight (256))
-        (chainRight (x => Math.log2 (x)))
-        (),
+      pipe (
+        Right (256),
+        chain ((x: number) => Right (Math.log2 (x))),
+        extract,
+    ),
     ).toBe (8);
   });
 
-  it ('allows to chainRight an eitherLeft', () => {
+  it ('allows to chain a Left', () => {
     expect (
-      pipe (eitherLeft (new Error ('it is an error')))
-        (chainRight ((x: number) => Math.log2 (x)))
-        (),
+      pipe (
+        Left (new Error ('it is an error')),
+        chain ((x: number) => Right (Math.log2 (x))),
+        extract,
+      ),
     ).toBeUndefined ();
   });
 
   it ('allows to identify if either is left', () => {
     expect (
-      pipe (eitherLeft (new Error ('it is an error')))
-        (isEitherLeft)
-        (),
+      pipe (
+        Left (new Error ('it is an error')),
+        isLeft,
+      ),
     ).toBeTruthy ();
   });
 
   it ('allows to identify is either is not left', () => {
     expect (
-      pipe (eitherRight (100))
-        (isEitherLeft)
-        (),
+      pipe (
+        Right (100),
+        isLeft,
+      ),
     ).toBeFalsy ();
   });
 
   it ('allows to identify if either is right', () => {
     expect (
-      pipe (eitherRight (12))
-        (isEitherRight)
-        (),
+      pipe (
+        Right (12),
+        isRight,
+      ),
     ).toBeTruthy ();
   });
 
   it ('allows to identify is either is not right', () => {
     expect (
-      pipe (eitherLeft ('hello'))
-        (isEitherRight)
-        (),
+      pipe (
+        Left ('hello'),
+        isRight,
+      ),
     ).toBeFalsy ();
   });
 
   it ('returns left type', () => {
-    const val = eitherLeft ('hello');
-    expectStrictType<EitherLeft<string>> (val);
+    const val = Left ('hello');
+    expectStrictType<Left<string>> (val);
   });
 
   it ('returns right type', () => {
-    const val = eitherRight (12);
-    expectStrictType<EitherRight<number>> (val);
+    const val = Right (12);
+    expectStrictType<Right<number>> (val);
   });
 
   it ('allows to chain left and right intime (left)', () => {
-    const incOdd = (x: number): Either<TypeError, number> => (
+    const incOdd = (x: number) => (
       x % 2 === 1
-        ? eitherRight (x + 1)
-        : eitherLeft (new TypeError (`Expected odd number, but received: "${x}"`))
+        ? Right (x + 1)
+        : Left (new TypeError (`Expected odd number, but received: "${x}"`))
     );
 
-    const res = pipe (incOdd (2))
-      (chain (e => e.message, x => x * 2))
-      ();
+    const res = pipe (
+      incOdd (2),
+      bichain (e => Right (e.message), x => Right (x * 2)),
+      extract,
+    );
 
     expectStrictType<string | number> (res);
 
@@ -150,13 +168,15 @@ describe ('either', () => {
   it ('allows to chain left and right intime (right)', () => {
     const incOdd = (x: number): Either<TypeError, number> => (
       x % 2 === 1
-        ? eitherRight (x + 1)
-        : eitherLeft (new TypeError (`Expected odd number, but received: "${x}"`))
+        ? Right (x + 1)
+        : Left (new TypeError (`Expected odd number, but received: "${x}"`))
     );
 
-    const res = pipe (incOdd (3))
-      (chain (e => e.message, x => x * 2))
-      ();
+    const res = pipe (
+      incOdd (3),
+      chain ((x: number) => Right (x * 2)),
+      extract,
+    );
 
     expectStrictType<string | number> (res);
 
@@ -164,38 +184,25 @@ describe ('either', () => {
   });
 
   it ('allows to chain left and right intime (left type assertion)', () => {
-    const res = pipe (eitherLeft (new TypeError ('error message')))
-      (chain (e => e.message, x => x * 2))
-      ();
+    const res = pipe (
+      Left (new TypeError ('error message')),
+      bichain (
+        error => Right (error.message),
+        (x: number) => Right (x * 2),
+      ),
+      extract,
+    );
 
-    expectStrictType<string> (res);
+    expectStrictType<string | number> (res);
   });
 
   it ('allows to chain left and right intime (right type assertion)', () => {
-    const res = pipe (eitherRight (4))
-      (chain ((e: Error) => e.message, x => x * 2))
-      ();
-
-    expectStrictType<number> (res);
-  });
-
-  it ('allows to chain left and right intime (with single function)', () => {
-    const incOdd = (x: number): Either<TypeError, number> => (
-      x % 2 === 1
-        ? eitherRight (x + 1)
-        : eitherLeft (new TypeError (`Expected odd number, but received: "${x}"`))
+    const res = pipe (
+      Right (4),
+      bichain ((e: Error) => Right (e.message), x => Right (x * 2)),
+      extract,
     );
 
-    const raise = <E extends Error>(error: E) => { throw error; };
-
-    const res = pipe (incOdd (3))
-      (chainLeftRight (
-        (error, value) => (error != null ? raise (error) : value),
-      ))
-      ();
-
-    expectStrictType<number> (res);
-
-    expect (res).toBe (4);
+    expectStrictType<number | string> (res);
   });
 });
